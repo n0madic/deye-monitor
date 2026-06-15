@@ -1,0 +1,8 @@
+Website = "https://github.com/snowirbis/solarman"
+
+[Details]
+Icon = "Icon.png"
+Name = "Deye Monitor"
+ID = "com.deye.monitor"
+Version = "1.0.0"
+Build = 5

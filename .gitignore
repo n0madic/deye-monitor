@@ -1,0 +1,4 @@
+bin/
+/deye-monitor
+*.apk
+*.keystore
