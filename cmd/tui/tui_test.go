@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 
 	ui "github.com/gizak/termui/v3"
 )

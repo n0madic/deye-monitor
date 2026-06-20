@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 func TestHeartbeatTag(t *testing.T) {

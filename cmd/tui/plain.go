@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // ANSI colors; cleared when output is not a terminal or for plain pipes.

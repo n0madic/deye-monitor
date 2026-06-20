@@ -1,4 +1,4 @@
-module deye-monitor
+module github.com/n0madic/deye-monitor
 
 go 1.26.4
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // runJSON prints a single snapshot as indented JSON (for cron/Grafana/pipes).

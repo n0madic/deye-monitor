@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // powerFlow is a custom widget that draws the Deye-Cloud-style power-flow

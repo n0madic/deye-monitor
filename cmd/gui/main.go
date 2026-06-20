@@ -10,7 +10,7 @@
 //	fyne package -os android -app-id com.deye.monitor -icon Icon.png
 package main
 
-import "deye-monitor/gui"
+import "github.com/n0madic/deye-monitor/gui"
 
 func main() {
 	gui.Main()

@@ -8,7 +8,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/test"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // These tests render the custom-drawn widgets and views through Fyne's headless

@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"time"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // Non-personal defaults. The logger IP and serial have no defaults — they
@@ -95,13 +95,6 @@ func displayModel(override string, r *deye.Reading) string {
 		return r.Model
 	}
 	return fallbackModel
-}
-
-func envOr(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
 }
 
 func envUintOr(key string, def uint64) uint64 {

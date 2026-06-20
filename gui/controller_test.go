@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // fakeSource is a scripted dataSource for controller tests. Each Snapshot call

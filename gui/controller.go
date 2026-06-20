@@ -8,7 +8,7 @@ import (
 
 	"fyne.io/fyne/v2"
 
-	"deye-monitor/deye"
+	"github.com/n0madic/deye-monitor/deye"
 )
 
 // historyLen is the number of samples each history ring buffer retains.
