@@ -58,6 +58,7 @@ var nodeCenters = [4][2]float32{
 type flowNodeObjs struct {
 	img    *canvas.Image
 	title  *canvas.Text
+	detail *canvas.Text // optional second line, e.g. "100%" for battery
 	value  *canvas.Text
 	line   *canvas.Line
 	arrow1 *canvas.Line // chevron barb
@@ -87,6 +88,7 @@ func (p *powerFlow) CreateRenderer() fyne.WidgetRenderer {
 		n := &flowNodeObjs{
 			img:    newIcon(icons[i]),
 			title:  newText("", theme.Color(theme.ColorNameForeground), true, fyne.TextAlignCenter),
+			detail: newText("", theme.Color(theme.ColorNameForeground), false, fyne.TextAlignCenter),
 			value:  newText("", theme.Color(theme.ColorNameForeground), false, fyne.TextAlignCenter),
 			line:   canvas.NewLine(color.Transparent),
 			arrow1: canvas.NewLine(color.Transparent),
@@ -95,7 +97,7 @@ func (p *powerFlow) CreateRenderer() fyne.WidgetRenderer {
 		n.line.StrokeWidth = 3
 		r.nodes[i] = n
 		// connector first so icons/text paint on top of it
-		r.objects = append(r.objects, n.line, n.arrow1, n.arrow2, n.img, n.title, n.value)
+		r.objects = append(r.objects, n.line, n.arrow1, n.arrow2, n.img, n.title, n.detail, n.value)
 	}
 	r.objects = append(r.objects, r.invImg, r.invTitle)
 	r.Refresh()
@@ -133,12 +135,10 @@ func (r *powerFlowRenderer) Refresh() {
 	views := r.views()
 	for i, v := range views {
 		n := r.nodes[i]
-		title := v.label
-		if v.detail != "" {
-			title = v.label + "  " + v.detail
-		}
-		n.title.Text = title
+		n.title.Text = v.label
 		n.title.Color = v.titleCol
+		n.detail.Text = v.detail
+		n.detail.Color = v.titleCol
 		if r.w.hasData {
 			n.value.Text = v.value
 		} else {
@@ -182,7 +182,14 @@ func (r *powerFlowRenderer) Layout(size fyne.Size) {
 		band := size.Width * 0.42
 
 		placeCentered(n.img, nx, ny, iconSize, iconSize)
-		placeText(n.title, nx, ny-iconSize*0.5-theme.TextSize()*1.4, band)
+		if n.detail.Text != "" {
+			placeText(n.title, nx, ny-iconSize*0.5-theme.TextSize()*2.6, band)
+			placeText(n.detail, nx, ny-iconSize*0.5-theme.TextSize()*1.4, band)
+		} else {
+			placeText(n.title, nx, ny-iconSize*0.5-theme.TextSize()*1.4, band)
+			n.detail.Move(fyne.NewPos(0, -100))
+			n.detail.Resize(fyne.NewSize(0, 0))
+		}
 		placeText(n.value, nx, ny+iconSize*0.5+theme.TextSize()*0.3, band)
 
 		// Connector from the node's icon edge to the inverter's icon edge.
