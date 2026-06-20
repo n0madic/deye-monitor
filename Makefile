@@ -23,6 +23,13 @@ GUI_DIR  := cmd/gui
 ICON     := Icon.png
 BIN      := bin
 
+# fyne package names the artifact after Details.Name in FyneApp.toml
+APP_DISPLAY := Deye Monitor
+GUI_ARTIFACT_darwin  := $(APP_DISPLAY).app
+GUI_ARTIFACT_linux   := $(APP_DISPLAY).tar.xz
+GUI_ARTIFACT_windows := $(APP_DISPLAY).exe
+APK_NAME := Deye_Monitor.apk
+
 GO   := go
 FYNE := fyne
 
@@ -38,7 +45,7 @@ help: ## Show this help
 		awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: all
-all: tui gui ## Build the TUI and the host GUI
+all: tui gui gui-android ## Build TUI + host GUI + Android APK -> bin/
 
 # --- TUI (host OS only) ------------------------------------------------------
 .PHONY: tui
@@ -49,28 +56,43 @@ tui: ## Build the TUI for the host OS -> bin/deye-monitor
 
 # --- GUI: native packaging (host OS must match target) -----------------------
 .PHONY: gui
-gui: ## Package the GUI for the host OS (artifact in cmd/gui/)
+gui: ## Package the GUI for the host OS -> bin/
+	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package
+	mv "$(GUI_DIR)/$(GUI_ARTIFACT_$(HOST_OS))" "$(BIN)/"
+	@echo "built $(BIN)/$(GUI_ARTIFACT_$(HOST_OS))"
 
 .PHONY: gui-darwin
-gui-darwin: ## Package the GUI as a macOS .app (run on macOS)
+gui-darwin: ## Package the GUI as a macOS .app -> bin/
+	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os darwin
+	mv "$(GUI_DIR)/$(GUI_ARTIFACT_darwin)" "$(BIN)/"
+	@echo "built $(BIN)/$(GUI_ARTIFACT_darwin)"
 
 .PHONY: gui-linux
-gui-linux: ## Package the GUI for Linux (run on Linux)
+gui-linux: ## Package the GUI for Linux -> bin/
+	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os linux
+	mv "$(GUI_DIR)/$(GUI_ARTIFACT_linux)" "$(BIN)/"
+	@echo "built $(BIN)/$(GUI_ARTIFACT_linux)"
 
 .PHONY: gui-windows
-gui-windows: ## Package the GUI for Windows (run on Windows)
+gui-windows: ## Package the GUI for Windows -> bin/
+	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os windows
+	mv "$(GUI_DIR)/$(GUI_ARTIFACT_windows)" "$(BIN)/"
+	@echo "built $(BIN)/$(GUI_ARTIFACT_windows)"
 
 .PHONY: gui-ios
 gui-ios: ## Package the GUI for iOS (needs Xcode, run on macOS)
 	cd $(GUI_DIR) && $(FYNE) package -os ios
 
 .PHONY: gui-android
-gui-android: ## Build a sideload-ready Android APK (target-35, v1+v2+v3 signed)
+gui-android: ## Build a sideload-ready Android APK -> bin/Deye_Monitor.apk
+	@mkdir -p $(BIN)
 	$(GUI_DIR)/build-android.sh
+	mv "$(GUI_DIR)/$(APK_NAME)" "$(BIN)/$(APK_NAME)"
+	@echo "built $(BIN)/$(APK_NAME)"
 
 # --- GUI: desktop cross-build from any host (needs fyne-cross + Docker) -------
 .PHONY: gui-cross-linux
