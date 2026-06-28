@@ -23,6 +23,7 @@ type powerFlow struct {
 	batP    float64 // battery power (W, <0 charging, >0 discharging)
 	loadP   float64 // load power (W, >=0)
 	soc     float64 // battery state of charge (%)
+	etaText string  // formatted time-to-full while charging ("" if unavailable)
 	hasData bool
 }
 
@@ -47,6 +48,16 @@ func (p *powerFlow) setReading(r *deye.Reading) {
 	p.Refresh()
 }
 
+// setChargeETA updates the battery node's time-to-full label. An empty string
+// clears it (battery not charging or no estimate yet) and repaints.
+func (p *powerFlow) setChargeETA(text string) {
+	if p.etaText == text {
+		return
+	}
+	p.etaText = text
+	p.Refresh()
+}
+
 // fractional centre of each corner node within the widget, indexed pv/grid/bat/load.
 var nodeCenters = [4][2]float32{
 	{0.17, 0.28}, // PV   — top-left
@@ -54,6 +65,9 @@ var nodeCenters = [4][2]float32{
 	{0.17, 0.72}, // BAT  — bottom-left
 	{0.83, 0.72}, // LOAD — bottom-right
 }
+
+// batteryNode indexes the battery corner within nodeCenters / the node arrays.
+const batteryNode = 2
 
 type flowNodeObjs struct {
 	img    *canvas.Image
@@ -71,6 +85,7 @@ type powerFlowRenderer struct {
 	invImg   *canvas.Image
 	invTitle *canvas.Text
 	nodes    [4]*flowNodeObjs
+	batETA   *canvas.Text // battery time-to-full, drawn below the battery node's value
 	objects  []fyne.CanvasObject
 }
 
@@ -82,6 +97,7 @@ func (p *powerFlow) CreateRenderer() fyne.WidgetRenderer {
 		bg:       canvas.NewRectangle(color.Transparent),
 		invImg:   newIcon(iconInverter),
 		invTitle: newText("INVERTER", theme.Color(theme.ColorNameForeground), false, fyne.TextAlignCenter),
+		batETA:   newText("", colGreen, false, fyne.TextAlignCenter),
 	}
 	r.objects = []fyne.CanvasObject{r.bg}
 	for i := range r.nodes {
@@ -99,7 +115,7 @@ func (p *powerFlow) CreateRenderer() fyne.WidgetRenderer {
 		// connector first so icons/text paint on top of it
 		r.objects = append(r.objects, n.line, n.arrow1, n.arrow2, n.img, n.title, n.detail, n.value)
 	}
-	r.objects = append(r.objects, r.invImg, r.invTitle)
+	r.objects = append(r.objects, r.invImg, r.invTitle, r.batETA)
 	r.Refresh()
 	return r
 }
@@ -157,6 +173,13 @@ func (r *powerFlowRenderer) Refresh() {
 		}
 	}
 	r.invTitle.Color = theme.Color(theme.ColorNameForeground)
+
+	if r.w.hasData && r.w.etaText != "" {
+		r.batETA.Text = "full in " + r.w.etaText
+	} else {
+		r.batETA.Text = ""
+	}
+
 	r.Layout(r.w.Size())
 	canvas.Refresh(r.w)
 }
@@ -191,6 +214,12 @@ func (r *powerFlowRenderer) Layout(size fyne.Size) {
 			n.detail.Resize(fyne.NewSize(0, 0))
 		}
 		placeText(n.value, nx, ny+iconSize*0.5+theme.TextSize()*0.3, band)
+
+		// The battery charge ETA sits one line below the value, in the outward
+		// corner — away from the connector arrow that fans toward the inverter.
+		if i == batteryNode {
+			placeText(r.batETA, nx, ny+iconSize*0.5+theme.TextSize()*1.6, band)
+		}
 
 		// Connector from the node's icon edge to the inverter's icon edge.
 		dx, dy := cx-nx, cy-ny

@@ -150,10 +150,25 @@ func (u *appUI) onUpdate(c *controller, r *deye.Reading, err error) {
 		u.header.setStale(true, err)
 		return
 	}
+	eta := chargeETAText(c, r)
 	u.header.update(r, u.modelOverride)
 	u.flow.setReading(r)
+	u.flow.setChargeETA(eta)
 	u.details.update(r)
+	u.details.setChargeETA(eta)
 	u.history.refresh(c)
+}
+
+// chargeETAText returns the formatted time-to-full label for the battery node,
+// or "" when the battery is not charging or no estimate is available yet.
+func chargeETAText(c *controller, r *deye.Reading) string {
+	if r.Values["bat_power"] >= 0 {
+		return "" // only meaningful while charging
+	}
+	if d, ok := c.chargeETA(); ok {
+		return deye.FormatETA(d)
+	}
+	return ""
 }
 
 // connect builds the data source (auto-discovering the serial if needed), tears

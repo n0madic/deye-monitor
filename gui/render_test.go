@@ -26,6 +26,19 @@ func TestPowerFlowRenders(t *testing.T) {
 	pf.setReading(mkReading(2500, 1200, -300, -800, 76)) // charge + export
 	w.Resize(fyne.NewSize(360, 600))                     // force re-layout
 	pf.setReading(mkReading(0, 900, 1500, 600, 18))      // import + discharge, low SOC
+
+	// Charge ETA renders as its own line in the battery node.
+	pf.setReading(mkReading(2500, 1200, -300, -800, 76))
+	pf.setChargeETA("1h23m")
+	rr := pf.CreateRenderer().(*powerFlowRenderer)
+	if got := rr.batETA.Text; got != "full in 1h23m" {
+		t.Fatalf("battery node ETA = %q, want %q", got, "full in 1h23m")
+	}
+	pf.setChargeETA("") // cleared when not charging
+	rr = pf.CreateRenderer().(*powerFlowRenderer)
+	if got := rr.batETA.Text; got != "" {
+		t.Fatalf("battery node ETA should clear, got %q", got)
+	}
 }
 
 func TestChartRenders(t *testing.T) {
@@ -54,6 +67,14 @@ func TestDetailsAndHeaderRender(t *testing.T) {
 	r.States["device_state"] = "Normal"
 	r.States["work_mode"] = "Zero Export To CT"
 	d.update(r)
+	d.setChargeETA("1h23m") // charging estimate
+	if got := d.eta.Text; got != "1h23m" {
+		t.Fatalf("battery time-to-full = %q, want %q", got, "1h23m")
+	}
+	d.setChargeETA("") // not charging / no estimate -> dash
+	if got := d.eta.Text; got != "—" {
+		t.Fatalf("empty ETA should clear to dash, got %q", got)
+	}
 	h.update(r, "")
 	h.setStale(true, errors.New("read timeout"))
 	h.setStale(false, nil)

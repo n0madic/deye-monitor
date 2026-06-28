@@ -33,6 +33,7 @@ type controller struct {
 	mu       sync.Mutex
 	src      dataSource
 	hist     map[string]*series
+	charge   *deye.ChargeEstimator
 	interval time.Duration
 
 	latest atomic.Pointer[deye.Reading]
@@ -59,6 +60,7 @@ func newController(src dataSource, interval time.Duration) *controller {
 		src:      src,
 		interval: interval,
 		hist:     make(map[string]*series, len(histKeys)),
+		charge:   deye.NewChargeEstimator(0),
 		dispatch: fyne.Do,
 	}
 	for _, k := range histKeys {
@@ -126,6 +128,18 @@ func (c *controller) pushHistory(r *deye.Reading) {
 	c.hist["load"].push(math.Abs(r.Values["load_power"]))
 	c.hist["grid"].push(math.Abs(r.Values["grid_power"]))
 	c.hist["bat"].push(math.Abs(r.Values["bat_power"]))
+	if soc, ok := r.Get("bat_soc"); ok {
+		c.charge.Observe(r.Time, soc)
+	}
+}
+
+// chargeETA returns the projected time until the battery is full and whether an
+// estimate is currently available. It is only meaningful while charging, so the
+// caller gates the result on a charging (negative) battery power.
+func (c *controller) chargeETA() (time.Duration, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.charge.TimeToFull()
 }
 
 // history returns a defensive copy of the named series' samples.

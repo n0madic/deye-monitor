@@ -88,6 +88,8 @@ type tui struct {
 	loadSeries *series
 	gridSeries *series
 	batSeries  *series
+
+	charge *deye.ChargeEstimator
 }
 
 func newTUI(ip, model string, interval time.Duration) *tui {
@@ -99,6 +101,7 @@ func newTUI(ip, model string, interval time.Duration) *tui {
 		loadSeries: newSeries(historyLen),
 		gridSeries: newSeries(historyLen),
 		batSeries:  newSeries(historyLen),
+		charge:     deye.NewChargeEstimator(0),
 	}
 
 	t.header = widgets.NewParagraph()
@@ -214,6 +217,9 @@ func (t *tui) renderHeader() {
 func (t *tui) update(r *deye.Reading) {
 	t.last = r
 	t.errMsg = ""
+	if soc, ok := r.Get("bat_soc"); ok {
+		t.charge.Observe(r.Time, soc)
+	}
 	t.renderHeader()
 	t.updateGauge(r)
 	t.updateFlow(r)
@@ -253,6 +259,12 @@ func (t *tui) updateGauge(r *deye.Reading) {
 	label := fmt.Sprintf("%d%%  %s %s", pct, kw(math.Abs(batP)), dir)
 	if bt, okt := r.Get("bat_temp"); okt {
 		label += fmt.Sprintf("  %s°C", num(bt))
+	}
+	// While charging, append the estimated time until the battery is full.
+	if batP < 0 {
+		if d, ok := t.charge.TimeToFull(); ok {
+			label += fmt.Sprintf("  full in %s", deye.FormatETA(d))
+		}
 	}
 	t.gauge.Label = label
 }

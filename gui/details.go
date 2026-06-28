@@ -37,6 +37,7 @@ func metricLabel(key string) string {
 type detailsView struct {
 	root     fyne.CanvasObject
 	updaters []func(*deye.Reading)
+	eta      *widget.Label // battery time-to-full; fed from the controller, not a reading
 }
 
 func newDetailsView() *detailsView {
@@ -55,6 +56,7 @@ func newDetailsView() *detailsView {
 		widget.NewCard("Battery", "", d.form(
 			d.metricRow("bat_soc", "%"), d.metricRow("bat_v", "V"),
 			d.metricRow("bat_power", "W"), d.metricRow("bat_temp", "°C"),
+			d.etaRow(),
 		)),
 		widget.NewCard("Grid", "", d.form(
 			d.metricRow("grid_l1_v", "V"), d.metricRow("grid_l2_v", "V"), d.metricRow("grid_l3_v", "V"),
@@ -111,6 +113,27 @@ func (d *detailsView) computedRow(label, unit string, fn func(*deye.Reading) flo
 		lbl.SetText(num(fn(r)) + " " + unit)
 	})
 	return widget.NewFormItem(label, lbl)
+}
+
+// etaRow makes the battery time-to-full row. Its value is not part of a reading
+// (it is a trend estimate owned by the controller), so it is updated separately
+// via setChargeETA rather than through the reading updaters.
+func (d *detailsView) etaRow() *widget.FormItem {
+	d.eta = widget.NewLabel("—")
+	d.eta.Alignment = fyne.TextAlignTrailing
+	return widget.NewFormItem("Time to full", d.eta)
+}
+
+// setChargeETA updates the battery time-to-full row. An empty string clears it to
+// "—" (battery not charging or no estimate yet).
+func (d *detailsView) setChargeETA(text string) {
+	if d.eta == nil {
+		return
+	}
+	if text == "" {
+		text = "—"
+	}
+	d.eta.SetText(text)
 }
 
 // stateRow makes a row bound to a decoded enum state (device_state, work_mode).

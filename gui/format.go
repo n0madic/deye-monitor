@@ -83,7 +83,9 @@ func gridView(gridP float64) nodeView {
 // batteryView resolves the battery node from bat_power and bat_soc: negative is
 // charging (inverter -> battery, out, green), positive is discharging (battery
 // -> inverter, in, yellow), zero is idle. The detail carries the SOC percentage,
-// and the label colour encodes SOC health (green/yellow/red by threshold).
+// and the label colour encodes SOC health (green/yellow/red by threshold). The
+// charge ETA is drawn separately (below the value) so it stays clear of the
+// connector arrow.
 func batteryView(batP, soc float64) nodeView {
 	v := nodeView{label: "BATTERY", value: kW(batP), detail: fmt.Sprintf("%.0f%%", soc), titleCol: socColor(soc)}
 	switch {

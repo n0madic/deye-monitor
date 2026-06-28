@@ -114,6 +114,37 @@ func TestTUIUpdate(t *testing.T) {
 	}
 }
 
+// TestTUIChargeETA verifies the Battery SOC gauge shows a time-to-full estimate
+// once a charging SOC trend has been observed, and hides it while discharging.
+func TestTUIChargeETA(t *testing.T) {
+	tu := newTUI("10.0.0.1", "Deye", time.Second)
+	base := time.Unix(1_700_000_000, 0)
+
+	// Charging ramp: SOC 50%->60% over 10 min at 1%/min (-2 kW battery power).
+	var last *deye.Reading
+	for i := range 21 {
+		last = &deye.Reading{
+			Time:   base.Add(time.Duration(i) * 30 * time.Second),
+			States: map[string]string{},
+			Values: map[string]float64{"bat_soc": 50 + 0.5*float64(i), "bat_power": -2000},
+		}
+		tu.update(last)
+	}
+	if !strings.Contains(tu.gauge.Label, "full in") {
+		t.Fatalf("gauge should show a charge ETA while charging, got %q", tu.gauge.Label)
+	}
+
+	// Switch to discharging: the ETA must disappear.
+	tu.update(&deye.Reading{
+		Time:   last.Time.Add(30 * time.Second),
+		States: map[string]string{},
+		Values: map[string]float64{"bat_soc": 60, "bat_power": 1500},
+	})
+	if strings.Contains(tu.gauge.Label, "full in") {
+		t.Fatalf("gauge must not show a charge ETA while discharging, got %q", tu.gauge.Label)
+	}
+}
+
 // TestTUIHeaderHeartbeat verifies the header surfaces the heartbeat indicator.
 func TestTUIHeaderHeartbeat(t *testing.T) {
 	tu := newTUI("10.0.0.1", "Deye", time.Second)

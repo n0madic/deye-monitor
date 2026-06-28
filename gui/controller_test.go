@@ -182,6 +182,42 @@ func TestControllerStartAndClose(t *testing.T) {
 	}
 }
 
+func TestControllerChargeETA(t *testing.T) {
+	t.Parallel()
+	base := time.Unix(1_700_000_000, 0)
+	// A charging ramp: SOC 50%->60% over 10 min, battery power negative.
+	var steps []step
+	for i := range 21 {
+		r := mkReading(0, 0, 0, -2000, 50+0.5*float64(i))
+		r.Time = base.Add(time.Duration(i) * 30 * time.Second)
+		steps = append(steps, step{r: r})
+	}
+	c := newTestController(&fakeSource{steps: steps})
+	c.onUpdate = func(*deye.Reading, error) {}
+	for range steps {
+		c.poll()
+	}
+
+	d, ok := c.chargeETA()
+	if !ok {
+		t.Fatal("chargeETA should be available after a charging ramp")
+	}
+	if d < 38*time.Minute || d > 42*time.Minute {
+		t.Fatalf("chargeETA = %s, want ~40m", d)
+	}
+
+	// chargeETAText surfaces a label while charging...
+	charging := mkReading(0, 0, 0, -2000, 60)
+	if got := chargeETAText(c, charging); got == "" {
+		t.Fatal("chargeETAText should return a label while charging")
+	}
+	// ...but stays empty while discharging, even with a valid estimate cached.
+	discharging := mkReading(0, 0, 0, 1500, 60)
+	if got := chargeETAText(c, discharging); got != "" {
+		t.Fatalf("chargeETAText = %q, want empty while discharging", got)
+	}
+}
+
 func TestControllerPauseSkipsTicks(t *testing.T) {
 	t.Parallel()
 	c := newTestController(&fakeSource{})

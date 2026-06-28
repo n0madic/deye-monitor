@@ -38,7 +38,8 @@ func runOnce(c *deye.Client, ip, model string) {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
-	fmt.Println(renderDashboard(r, ip, model))
+	// A single snapshot has no SOC history, so no charge ETA is available.
+	fmt.Println(renderDashboard(r, ip, model, ""))
 }
 
 // runPlainLoop runs the text dashboard on an interval. Used for -plain and when
@@ -49,6 +50,7 @@ func runPlainLoop(c *deye.Client, ip, model string, interval time.Duration) {
 	if !tty {
 		disableColors()
 	}
+	charge := deye.NewChargeEstimator(0)
 	for {
 		r, err := c.Snapshot()
 		if err != nil {
@@ -56,10 +58,19 @@ func runPlainLoop(c *deye.Client, ip, model string, interval time.Duration) {
 			time.Sleep(min(interval, 3*time.Second))
 			continue
 		}
+		eta := ""
+		if soc, ok := r.Get("bat_soc"); ok {
+			charge.Observe(r.Time, soc)
+			if r.Values["bat_power"] < 0 {
+				if d, ok := charge.TimeToFull(); ok {
+					eta = deye.FormatETA(d)
+				}
+			}
+		}
 		if tty {
 			fmt.Print("\033[2J\033[H")
 		}
-		fmt.Println(renderDashboard(r, ip, model))
+		fmt.Println(renderDashboard(r, ip, model, eta))
 		if tty {
 			fmt.Printf("\n%srefresh %s · Ctrl-C to quit%s\n", cDim, interval.String(), cReset)
 		}
@@ -89,7 +100,7 @@ func line() string {
 	return "──────────────────────────────────────────────────────────────────"
 }
 
-func renderDashboard(r *deye.Reading, ip, model string) string {
+func renderDashboard(r *deye.Reading, ip, model, eta string) string {
 	model = displayModel(model, r)
 	g := r.Get
 	batP := r.Values["bat_power"]
@@ -151,9 +162,13 @@ func renderDashboard(r *deye.Reading, ip, model string) string {
 	add(fmt.Sprintf("           PV3 %s   PV4 %s          %sΣ %s W%s",
 		fw(pv3p, ok3, "W", 7), fw(pv4p, ok4, "W", 7), cBold, num(r.PVTotal()), cReset))
 
-	add(fmt.Sprintf("%s⚡ BATTERY%s SOC %s%s%s  %s  %s %s  %s",
+	etaTag := ""
+	if eta != "" {
+		etaTag = fmt.Sprintf("  %sfull in %s%s", cGreen, eta, cReset)
+	}
+	add(fmt.Sprintf("%s⚡ BATTERY%s SOC %s%s%s  %s  %s %s  %s%s",
 		cGreen, cReset, cBold, fw(bsoc, oks, "%", 4), cReset,
-		fw(bv, okv, "V", 8), fw(math.Abs(batP), true, "W", 7), batDir, fw(bt, okt, "°C", 7)))
+		fw(bv, okv, "V", 8), fw(math.Abs(batP), true, "W", 7), batDir, fw(bt, okt, "°C", 7), etaTag))
 
 	add(fmt.Sprintf("%s🔌 GRID%s    L1 %s  L2 %s  L3 %s  %s",
 		cBlue, cReset, fw(g1, okg1, "V", 7), fw(g2, okg2, "V", 7), fw(g3, okg3, "V", 7), fw(gf, okgf, "Hz", 8)))

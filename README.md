@@ -44,9 +44,11 @@ switches to plain-text dashboard mode because termui requires a real TTY.
 Features:
 
 - **Power Flow tab** - Deye-cloud-style diagram with inverter/PV/grid/battery/load
-  nodes, directional arrows, and color-coded flows.
+  nodes, directional arrows, and color-coded flows. The battery node also shows
+  the estimated time until full while charging (e.g. `80% · full 1h23m`).
 - **Details tab** - live metrics cards (status, PV, battery, grid, load,
-  temperatures, daily/total energy).
+  temperatures, daily/total energy). The Battery card adds a `Time to full` row
+  with the estimated time remaining while charging.
 - **History tab** - rolling line charts for PV, load, grid, and battery power.
 - **Settings dialog** - logger IP, serial, port, interval, web credentials,
   and model override. If serial is empty, it is auto-discovered from the
@@ -120,7 +122,10 @@ Interactive dashboard built with
 [`github.com/gizak/termui/v3`](https://github.com/gizak/termui):
 
 - **Battery charge gauge** - SOC bar with level-based color (green >=50%,
-  yellow >=20%, red below), plus charge/discharge power and temperature.
+  yellow >=20%, red below), plus charge/discharge power and temperature. While
+  charging, the gauge label also shows a `full in 1h23m` estimate of the time
+  remaining until the battery is full (also shown on the plain/`-plain` battery
+  line).
 - **Power sparklines** - history (up to 120 points) for PV, load, grid, and
   battery. Values are absolute; sign (import/export, charge/discharge) is shown
   in labels.
