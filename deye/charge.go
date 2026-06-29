@@ -2,15 +2,25 @@ package deye
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
 // Charge-estimator tuning. The device never reports its battery capacity, so the
 // time-to-full is derived purely from the observed state-of-charge (SOC) trend.
+//
+// The inverter reports SOC as whole percent (1% resolution), so at a typical
+// ~8%/h charge it only ticks once every ~7-8 minutes. The window must therefore
+// span several of those steps for the least-squares slope to be stable: a short
+// window sees a single step and the fitted rate swings wildly — biased high
+// right after a tick, which yields an over-optimistic, drifting ETA. We also
+// require a minimum net SOC movement before reporting, so a lone quantization
+// step never masquerades as a trend.
 const (
-	defaultChargeWindow = 10 * time.Minute // sliding window the SOC rate is fitted over
+	defaultChargeWindow = 45 * time.Minute // sliding window the SOC rate is fitted over
 	minChargeSamples    = 3                // need at least this many points to fit a line
 	minChargeSpan       = 60 * time.Second // ...spread over at least this much time
+	minChargeDelta      = 2.0              // ...and at least this much SOC movement (percent)
 	maxChargeETA        = 48 * time.Hour   // estimates beyond this are treated as noise
 	fullSOC             = 100.0            // a full battery, in percent
 )
@@ -120,6 +130,12 @@ func (e *ChargeEstimator) slopePerSec() (float64, bool) {
 	}
 	t0 := e.samples[0].t
 	if e.samples[n-1].t.Sub(t0) < minChargeSpan {
+		return 0, false
+	}
+	// With 1% SOC resolution, a single quantization step over a short span fits
+	// a wildly steep slope. Require enough net movement that the trend reflects
+	// several real steps, not one tick.
+	if math.Abs(e.samples[n-1].soc-e.samples[0].soc) < minChargeDelta {
 		return 0, false
 	}
 	var sx, sy, sxx, sxy float64

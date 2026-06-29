@@ -73,6 +73,71 @@ func TestChargeETANotEnoughSignal(t *testing.T) {
 	}
 }
 
+// TestChargeETAIntegerSOC mirrors the real device: SOC is reported as whole
+// percent, so the trend has to be fitted across several 1% steps. A realistic
+// ~8%/h charge ticks once every ~7.5 min; over a 45-minute window that is ~6
+// steps, enough for a stable rate and a sane time-to-full.
+func TestChargeETAIntegerSOC(t *testing.T) {
+	t.Parallel()
+	e := NewChargeEstimator(0) // default 45-minute window
+	base := time.Unix(1_700_000_000, 0)
+
+	// 1% steps 7.5 min apart starting at 70% => ~8%/h. Poll every 30s so each
+	// step is held across many samples, exactly like the live poller.
+	soc := 70.0
+	last := base
+	for i := range 91 { // 91 * 30s = 45 min
+		ts := base.Add(time.Duration(i) * 30 * time.Second)
+		if ts.Sub(last) >= 450*time.Second && soc < 100 {
+			soc++
+			last = ts
+		}
+		e.Observe(ts, soc)
+	}
+
+	rate, ok := e.RatePerHour()
+	if !ok {
+		t.Fatal("RatePerHour not available after a full window of integer-SOC steps")
+	}
+	if rate < 6 || rate > 10 {
+		t.Fatalf("rate = %.2f %%/h, want ~8", rate)
+	}
+
+	d, ok := e.TimeToFull()
+	if !ok {
+		t.Fatal("TimeToFull not available while charging")
+	}
+	// ~76% with ~24% remaining at ~8%/h => roughly 3 hours, not the minutes a
+	// short window would have produced from the most recent single step.
+	if d < 2*time.Hour || d > 4*time.Hour {
+		t.Fatalf("TimeToFull = %s, want ~3h", d)
+	}
+}
+
+// TestChargeETAIgnoresSingleStep is the regression guard for the warm-up
+// artifact: a lone +1% quantization step within the window must not yield an
+// ETA, however the samples are spaced.
+func TestChargeETAIgnoresSingleStep(t *testing.T) {
+	t.Parallel()
+	e := NewChargeEstimator(0)
+	base := time.Unix(1_700_000_000, 0)
+
+	// Flat at 70% for 5 min, then a single +1% tick, then flat at 71%. Net
+	// movement is only 1% (< minChargeDelta), so no estimate yet.
+	for i := range 10 {
+		e.Observe(base.Add(time.Duration(i)*30*time.Second), 70)
+	}
+	for i := 10; i < 20; i++ {
+		e.Observe(base.Add(time.Duration(i)*30*time.Second), 71)
+	}
+	if _, ok := e.TimeToFull(); ok {
+		t.Fatal("a single 1% step must not produce a time-to-full estimate")
+	}
+	if _, ok := e.RatePerHour(); ok {
+		t.Fatal("a single 1% step must not produce a rate")
+	}
+}
+
 func TestChargeETAAlreadyFull(t *testing.T) {
 	t.Parallel()
 	e := NewChargeEstimator(30 * time.Minute)
