@@ -59,6 +59,7 @@ tui: ## Build the TUI for the host OS -> bin/deye-monitor
 gui: ## Package the GUI for the host OS -> bin/
 	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package
+	rm -rf "$(BIN)/$(GUI_ARTIFACT_$(HOST_OS))"
 	mv "$(GUI_DIR)/$(GUI_ARTIFACT_$(HOST_OS))" "$(BIN)/"
 	@echo "built $(BIN)/$(GUI_ARTIFACT_$(HOST_OS))"
 
@@ -66,6 +67,7 @@ gui: ## Package the GUI for the host OS -> bin/
 gui-darwin: ## Package the GUI as a macOS .app -> bin/
 	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os darwin
+	rm -rf "$(BIN)/$(GUI_ARTIFACT_darwin)"
 	mv "$(GUI_DIR)/$(GUI_ARTIFACT_darwin)" "$(BIN)/"
 	@echo "built $(BIN)/$(GUI_ARTIFACT_darwin)"
 
@@ -73,6 +75,7 @@ gui-darwin: ## Package the GUI as a macOS .app -> bin/
 gui-linux: ## Package the GUI for Linux -> bin/
 	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os linux
+	rm -rf "$(BIN)/$(GUI_ARTIFACT_linux)"
 	mv "$(GUI_DIR)/$(GUI_ARTIFACT_linux)" "$(BIN)/"
 	@echo "built $(BIN)/$(GUI_ARTIFACT_linux)"
 
@@ -80,6 +83,7 @@ gui-linux: ## Package the GUI for Linux -> bin/
 gui-windows: ## Package the GUI for Windows -> bin/
 	@mkdir -p $(BIN)
 	cd $(GUI_DIR) && $(FYNE) package -os windows
+	rm -rf "$(BIN)/$(GUI_ARTIFACT_windows)"
 	mv "$(GUI_DIR)/$(GUI_ARTIFACT_windows)" "$(BIN)/"
 	@echo "built $(BIN)/$(GUI_ARTIFACT_windows)"
 
